@@ -286,7 +286,7 @@ let(:test_result_data_mlp_divmod_1) {
       task_factory.config(test_config_data_all_1)
       tasks = task_factory.tasks
       match = test_data_matcher(test_result_data_all_1,tasks)
-      expect(match).to eql(234)
+      expect(match).to eql(862)
     end
 
 

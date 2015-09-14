@@ -9,7 +9,10 @@ class TaskBuilder < Array
 
   def task
     return Task.new(self) if validate_syntax
-    raise TaskSyntaxError.new
+  end
+
+  def ok?
+    return validate_syntax
   end
 
   def self.operators
@@ -92,33 +95,50 @@ class TaskBuilder < Array
     end
   end
 
-  def validate_syntax idx
+  def validate_syntax
+    raise TaskSyntaxError.new(self) if length == 0 or not(literal?(self[0]) or bracket_start?(self[0]))
+    validate_syntax_p(0)
+    return true
+  end
+
+  def validate_syntax_p offset
+    position = offset
     previous_type = nil
-    passed = find_index do |token|
-      failed = false
-      if previous_type == nil and not literal_start?(token)
-        failed = true
-      elsif index(token) == length - 1
-        failed = true if previous_type == :literal or token_type(token) == :operator
-      else
-        t_type = token_type(token)
-        case t_type
-        when :operator
-          failed = true if previous_type == :operator
-        when :literal
-          failed = true if previous_type == :literal
+    t_type = token_type(self[offset])
+    raise TaskSyntaxError.new(self) if not (t_type == :literal or t_type == :bracket_start)
+    failed = false
+    #puts 'syntax validation'
+    while position < (self.size - 1) and not failed and t_type != :bracket_end
+      position += 1
+      previous_type = t_type
+      t_type = token_type(self[position])
+    #  p t_type
+      case t_type
+      when :operator
+        failed = true if previous_type == :operator or previous_type == :bracket_start
+      when :literal
+        failed = true if previous_type == :literal or previous_type == :bracket_end
+      when :bracket_start
+        if previous_type == :operator or previous_type == :bracket_start
+          position = validate_syntax_p(position)
+        else
+          failed = true
         end
-        previous_type = t_type
+      when :bracket_end
+        failed = true if not(previous_type == :literal or previous_type == :bracket_end)
       end
-      failed
     end
-    raise TaskSyntaxError.new(self) if passed != nil or literal_end?(previous_type)
-    passed == nil
+    t_type = token_type(self[position])
+    #puts 'validation ended'
+    failed = true if not(t_type == :literal or t_type == :bracket_end)
+    #p failed
+    raise TaskSyntaxError.new(self) if failed
+    return position
   end
 
   def validate_tokens *args
     args.each do |obj|
-      raise ArgumentError.new if not (operator?(obj) or literal?(obj))
+      raise ArgumentError.new(args) if token_type(obj) == :unknown
     end
     true
   end
@@ -128,20 +148,22 @@ class TaskBuilder < Array
   end
 
   def literal? obj
-    obj.kind_of?(Fixnum) or obj.eql?('(') or obj.eql?(')')
+    obj.kind_of?(Fixnum)
   end
 
-  def literal_end? obj
-    obj.kind_of?(Fixnum) or obj.eql?(')')
+  def bracket_end? obj
+    obj.eql?(')')
   end
 
-  def literal_start? obj
-    obj.kind_of?(Fixnum) or obj.eql?('(')
+  def bracket_start? obj
+    obj.eql?('(')
   end
 
   def token_type obj
     return :operator if operator?(obj)
     return :literal if literal?(obj)
+    return :bracket_start if bracket_start?(obj)
+    return :bracket_end if bracket_end?(obj)
     return :unknown
   end
 
