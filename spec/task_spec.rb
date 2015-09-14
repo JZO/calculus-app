@@ -10,12 +10,12 @@ RSpec.describe Task do
     it 'is created with non-valid data' do
       expect {Task.new([])}.to raise_error(ArgumentError)
       expect {Task.new([1,1])}.to raise_error(ArgumentError)
-      expect {Task.new [+1,'+',-2,'s']}.to raise_error(ArgumentError)
+      expect {Task.new [+1,:+,-2,'s']}.to raise_error(ArgumentError)
     end
   end
 
   context "Task can:" do
-    let(:task) { Task.new [1,'+',2,'+',-2,'+',1] }
+    let(:task) { Task.new [1,:+,2,:+,-2,:+,1] }
 
     it "give an expected/correct result." do
       expect( task.result?).to eq(2)
@@ -27,7 +27,7 @@ RSpec.describe Task do
   end
 
   context "Task's behavior depends on its state:" do
-    let(:task) { Task.new [1,'+',2,'+',-2,'+',1] }
+    let(:task) { Task.new [1,:+,2,:+,-2,:+,1] }
 
     it "Task has :none state before first call to answer." do
       expect( task.passed? ).to eq(:none)

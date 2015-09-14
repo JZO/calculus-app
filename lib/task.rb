@@ -1,3 +1,6 @@
+class TaskSyntaxError < StandardError
+end
+
 class Task
 
   def initialize array
@@ -15,7 +18,7 @@ class Task
       token_type = false
       if token.class.eql?(Fixnum)
         token_type = :numeric
-      elsif ['+','-','*','/'].include?(token)
+      elsif [:+,:-,:*,:/].include?(token)
           token_type = :operator
       else
         token_type = :invalid
@@ -43,6 +46,10 @@ class Task
 
   def result?
     return instance_eval(@expresion_data.join(' '))
+  end
+
+  def to_arry
+    return @expresion_data.clone
   end
 
   def answer? result
