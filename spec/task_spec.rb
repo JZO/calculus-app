@@ -30,35 +30,35 @@ RSpec.describe Task do
     let(:task) { Task.new [1,:+,2,:+,-2,:+,1] }
 
     it "Task has :none state before first call to answer." do
-      expect( task.passed? ).to eq(:none)
+      expect( task.status? ).to eq(:none)
     end
 
     it "Task is :failed when it is answered incorrectly" do
       task.answer?(3)
-      expect( task.passed? ).to eq(:failed)
+      expect( task.status? ).to eq(:failed)
     end
 
     it "Task can not change state when :failed" do
       task.answer?(3)
       task.answer?(2)
-      expect( task.passed? ).to eq(:failed)
+      expect( task.status? ).to eq(:failed)
     end
 
     it "Task's state returns to :none when reseted." do
       task.answer?(3)
       task.reset
-      expect( task.passed? ).to eq(:none)
+      expect( task.status? ).to eq(:open)
     end
 
     it "Task is :passed when it is answered with correct result." do
       task.answer?(2)
-      expect( task.passed? ).to eq(:passed)
+      expect( task.status? ).to eq(:passed)
     end
 
     it "Task can not change state when :passed." do
       task.answer?(2)
       task.answer?(3)
-      expect( task.passed? ).to eq(:passed)
+      expect( task.status? ).to eq(:passed)
     end
 
  end
