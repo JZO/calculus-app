@@ -3,6 +3,7 @@ require "ansi/progressbar"
 require_relative 'task_factory'
 require_relative "factory_configurator"
 require 'task_roll'
+require_relative 'calculus_progressbar'
 
 class String
   def is_number?
@@ -41,8 +42,17 @@ class CalculusCLI < Thor
       puts
       say("Configuration ..... done. Number of tasks generated: #{@task_roll.tasks.size}")
       print 'How many tasks do you want? '
-      line = $stdin.readline()
-      number = Integer(line)
+      input_ok = false
+      begin
+        line = $stdin.readline()
+        number = Integer(line)
+        input_ok = true
+      rescue ArgumentError
+        puts "  .. Not a number, try it again."
+        print 'How many tasks do you want? '
+        next
+      ensure
+      end while not input_ok
       @task_roll.shuffle!
       @task_roll.slice!(0,number)
       @task_roll.each do |task|
@@ -94,11 +104,12 @@ class CalculusCLI < Thor
     config { true } if not @task_roll
     puts "\e[2J"
     tasks = @task_roll.each
-    pbar = ANSI::Progressbar.new("(-: SCORE :-)",tasks.size )
+    #pbar = ANSI::Progressbar.new("(-: SCORE :-)",tasks.size )
+    pbar = ::CalculusProgressbar.new("(-: SCORE :-)",tasks.size )
     #pbar.standard_mode
-    pbar.bar_mark = "ᗧ"
-    pbar.format("%-14s %3d%% %s %s", :title, :percentage, :bar, :stat)
-    pbar.style(:title => [:blue], :bar=>[:green])
+    pbar.bar_mark ".", "X", "ᗧ", "\u00B7"
+    pbar.format("%-14s %3d%% |%s%s%s| %s", :title, :percentage, :bar_ok, :bar_current, :bar_todo, :stat)
+    pbar.style(:title => [:blue], :bar_ok=>[:green], :bar_current => [:yellow], :bar_todo => [:white])
     print "\e[0;0H"
     pbar.inc(tasks.size * 0.01)
     task = tasks.next
@@ -108,55 +119,78 @@ class CalculusCLI < Thor
     #printf("export PS1='> '\n")
     mistake_couter = 0
     pbar.set(0)
-    begin
+
     while true
       #print "\n"
-      print "\e[10;20H", "\e[2K", ' > '
-      result = task.result?
-      print task.to_s, ' '
-      line = $stdin.readline()
-    begin
-        # Convert string to integer.
+      input_ok = false
+      begin
+        print "\e[10;20H", "\e[2K", '   '
+        result = task.result?
+        print task.to_s, ' '
+        print "\e[s"
+        line = $stdin.readline()
+        print "\e[u"
         number = Integer(line)
-        if task.answer?(number)
-          print "\e[0;0H"
-          pbar.inc
-          print "\e[10;32H"
-          print '  .. Great!!!'
-          `say "Great!"`
-          mistake_couter = 0
-          task = tasks.next
-       elsif mistake_couter < 2
-          mistake_couter += 1
-          print "\e[10;32H"
-          print "  .. Wrong, try it again."
-          `say -v Whisper "Wrong, try it again."`
-        else
-          print "\e[0;0H"
-          pbar.inc
-          print "\e[10;32H"
-          print "  .. Wrong."
-          `say -v Whisper "Wrong, next task."`
-          mistake_couter = 0
-          task = tasks.next
-        end
-    rescue ArgumentError
-      print "  .. Not a number, try it again."
-      `echo -e \a`
-    ensure
-      #sleep(1)
-    end
-    end
-    rescue StopIteration
-      puts "\e[2J"
-      print "\e[0;0H"
-      pbar.finish
-      print "\e[10;20H"
-      print "!!!!!  CONGRATULATIONS  !!!!!"
-      $stdin.readline()
-      puts "\e[2J"
-      print "\e[0;0H"
-    end
+        input_ok = true
+      rescue ArgumentError
+        print "\e[10;20H", "\e[2K", '   '
+        print task.to_s, ' '
+        print "\e[s"
+        print "  .. Not a number, try it again."
+        print "\e[u"
+        `say "Not a number."`
+        sleep(1)
+        next
+        #`echo -e \a`
+      ensure
+        #sleep(1)
+      end while not input_ok
+
+      begin
+      if task.answer?(number)
+        print "\e[s"
+        print "\e[0;0H"
+        pbar.inc 1, true
+        print "\e[u"
+        print "\e[s"
+       # print "\e[10;39H"
+        print '  .. Great!!!'
+        print "\e[u"
+        `say "Great!"`
+        mistake_couter = 0
+        task = tasks.next
+     elsif mistake_couter < 2
+        mistake_couter += 1
+        #print "\e[10;39H"
+        print "\e[s"
+        print "  .. Wrong, try it again."
+        print "\e[u"
+        `say -v Whisper "Wrong, try it again."`
+      else
+        print "\e[s"
+        print "\e[0;0H"
+        pbar.inc 1, false
+        print "\e[u"
+        #print "\e[10;39H"
+        print "\e[s"
+        print "  .. Wrong."
+        print "\e[u"
+        `say -v Whisper "Wrong, next task."`
+        mistake_couter = 0
+        task = tasks.next
+      end
+      rescue StopIteration
+        puts "\e[2J"
+        print "\e[0;0H"
+        pbar.finish
+        print "\e[10;20H"
+        print "!!!!!  CONGRATULATIONS  !!!!!"
+        $stdin.readline()
+        puts "\e[2J"
+        print "\e[0;0H"
+        break
+      end
+    end # while true
     rescue Interrupt
       puts
       puts "Exiting ... ᗧ ○◯     ◯  ◯ ᗣ "
