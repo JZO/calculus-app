@@ -12,14 +12,15 @@ end
 
 class CalculusCLI < Thor
   include Thor::Actions
-  class_option  :name, required: true, type: :string
-  class_option :ranges, required: true, type: :hash
-  class_option :operators, required: true, type: :array
-  class_option :opN, required: false, type: :numeric, default: 1
-  class_option :mixed, required: false, type: :boolean, default: false
+  class_option  :name, required: true, type: :string, desc: 'user name'
+  class_option :ranges, required: true, type: :hash, desc: 'opL:MIN opH:MAX reL:MIN reH:MAX --- a hash with min and max numbers to be used in tasks'
+  class_option :operators, required: true, type: :array, desc: ':+ :- :/ :* operators to be used in tasks'
+  class_option :opN, required: false, type: :numeric, default: 1, desc: 'maximum number of operators in a task'
+  class_option :mixed, required: false, type: :boolean, default: false, desc: 'boolean, mix operators together in a task'
 
 
-  desc "config --name 'NAME' --Ranges opL:0 opH:10 reL:5 reH:10 --OPERATORS +,-,/,* --opN 2 --mixed", "validates configuration and generates the tasks."
+  desc "config --name 'NAME' --Ranges opL:0 opH:10 reL:0 reH:10 --OPERATORS :+ :- :/ :* --opN 2 --mixed", "validates configuration and generates the tasks."
+  #disable_class_options
   def config
     begin
       tested_key = 'opL opH reL reH'
@@ -39,11 +40,14 @@ class CalculusCLI < Thor
       print_progress_bar(100)
       puts
       say("Configuration ..... done. Number of tasks generated: #{@task_roll.tasks.size}")
-      puts 'How many tasks do you want?'
+      print 'How many tasks do you want? '
       line = $stdin.readline()
       number = Integer(line)
       @task_roll.shuffle!
       @task_roll.slice!(0,number)
+      @task_roll.each do |task|
+        puts "#{task.to_s}"
+      end
       if not yes?('Continue?')
         exit
       elsif block_given?
@@ -57,6 +61,7 @@ class CalculusCLI < Thor
     rescue Interrupt
       puts
       puts "Exiting ..."
+      exit
     end
     return
   end
@@ -79,11 +84,11 @@ class CalculusCLI < Thor
 
     --MIXED option, if set calculus will generate tasks with combined operators from OPERATORS option
 
-    > $ calculus go --name "Jiri Zoth" --Ranges opL:0 opH:10 reL:5 reH:10 --OPERATORS +,-,/,* --opN 2 --mixed
+    > $ calculus go --name "Jiri Zoth" --Ranges opL:0 opH:10 reL:0 reH:10 --OPERATORS :+ :- :/ :* --opN 2 --mixed
 
     >
   LONGDESC
-
+  #disable_class_options
   def go
     begin
     config { true } if not @task_roll
@@ -98,7 +103,7 @@ class CalculusCLI < Thor
     pbar.inc(tasks.size * 0.01)
     task = tasks.next
     print "\e[8;21H"
-    print "What is a result of?"
+    print "What is the result of?"
 
     #printf("export PS1='> '\n")
     mistake_couter = 0
@@ -110,31 +115,36 @@ class CalculusCLI < Thor
       result = task.result?
       print task.to_s, ' '
       line = $stdin.readline()
-      print "\e[10;32H"
     begin
         # Convert string to integer.
         number = Integer(line)
         if task.answer?(number)
+          print "\e[0;0H"
+          pbar.inc
+          print "\e[10;32H"
           print '  .. Great!!!'
           `say "Great!"`
+          mistake_couter = 0
           task = tasks.next
-        elsif mistake_couter < 2
+       elsif mistake_couter < 2
           mistake_couter += 1
+          print "\e[10;32H"
           print "  .. Wrong, try it again."
           `say -v Whisper "Wrong, try it again."`
         else
+          print "\e[0;0H"
+          pbar.inc
+          print "\e[10;32H"
           print "  .. Wrong."
           `say -v Whisper "Wrong, next task."`
           mistake_couter = 0
           task = tasks.next
         end
-        print "\e[0;5H"
-        pbar.inc
     rescue ArgumentError
       print "  .. Not a number, try it again."
       `echo -e \a`
     ensure
-      sleep(1)
+      #sleep(1)
     end
     end
     rescue StopIteration

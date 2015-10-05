@@ -53,6 +53,7 @@ class TaskFactory
      end
      last_operator = task.last_operator
      operators.each do |operator|
+       #puts "operator #{operator}"
       if last_operator != nil and not mixed and not operator.eql?(last_operator)
         next
       else

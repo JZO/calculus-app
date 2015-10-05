@@ -6,4 +6,10 @@ $LOAD_PATH.unshift "./lib/"
 
 require 'calculus_cli'
 
-CalculusCLI.start(ARGV)
+begin
+  ENV["THOR_DEBUG"] = "1"
+  CalculusCLI.start(ARGV)
+rescue Thor::RequiredArgumentMissingError => e
+  puts "#{e}"
+  CalculusCLI.help(Thor::Base.shell.new)
+end
